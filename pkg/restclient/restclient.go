@@ -3,6 +3,7 @@ package restclient
 import (
     "bytes"
     "encoding/json"
+    "io/ioutil"
     "net/http"
     "net/url"
     "strings"
@@ -37,13 +38,22 @@ func PostForm(url string, data url.Values) (*http.Response, error) {
     return Client.Do(request)
 }
 
-func PostJson(url string, value interface{}) (*http.Response, error) {
+func PostJson(url string, value interface{}, response interface{}) error {
     payloadBuf := new(bytes.Buffer)
     json.NewEncoder(payloadBuf).Encode(value)
     request, err := http.NewRequest("POST", url, payloadBuf)
     request.Header.Set("Content-Type", "application/json")
     if err != nil {
-        return nil, err
+        return err
     }
-    return Client.Do(request)
+    res, err := Client.Do(request)
+    if err != nil {
+        return err
+    }
+    bytes, _ := ioutil.ReadAll(res.Body)
+    defer res.Body.Close()
+    if err := json.Unmarshal(bytes, &response); err != nil {
+        return err
+    }
+    return nil
 }
